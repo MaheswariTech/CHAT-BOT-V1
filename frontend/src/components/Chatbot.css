@@ -107,7 +107,7 @@
     line-height: 1.6;
     position: relative;
     animation: msgFade 0.3s ease;
-    white-space: pre-wrap;
+
     word-break: break-word;
 }
 
@@ -187,4 +187,39 @@
 .chat-input button:disabled {
     opacity: 0.5;
     cursor: not-allowed;
+}
+
+/* ... existing styles ... */
+
+.message p {
+    margin: 0 0 10px 0;
+}
+
+.message p:last-child {
+    margin-bottom: 0;
+}
+
+.message strong {
+    font-weight: 700;
+}
+
+.message ul,
+.message ol {
+    margin: 10px 0;
+    padding-left: 20px;
+}
+
+.message li {
+    margin-bottom: 5px;
+}
+
+.message a {
+    color: inherit;
+    text-decoration: underline;
+}
+
+/* Fix for white-space pre-wrap with markdown */
+.message {
+    /* white-space: pre-wrap; Removed this as ReactMarkdown handles blocks */
+    word-break: break-word;
 }

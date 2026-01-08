@@ -1,7 +1,7 @@
 import os
 from langchain_community.document_loaders import PyPDFLoader, TextLoader, Docx2txtLoader, WebBaseLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langchain_openai import OpenAIEmbeddings
+
 from langchain_community.vectorstores import FAISS
 
 # Path to store FAISS index
@@ -50,15 +50,10 @@ def _process_documents(documents, source_name):
 
     chunks = text_splitter.split_documents(docs_with_metadata)
 
-    # Embeddings model (Using the most cost-efficient and latest small model)
-    api_key = os.getenv("OPENAI_API_KEY")
-    if not api_key:
-        raise ValueError("OPENAI_API_KEY not found in environment variables.")
-        
-    embeddings = OpenAIEmbeddings(
-        api_key=api_key,
-        model="text-embedding-3-small"
-    )
+    # Embeddings model (Using local HuggingFace embeddings)
+    from langchain_huggingface import HuggingFaceEmbeddings
+    
+    embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
 
     # Create or update FAISS index (Ensure DB directory exists)
     db_dir = os.path.dirname(FAISS_INDEX_PATH)

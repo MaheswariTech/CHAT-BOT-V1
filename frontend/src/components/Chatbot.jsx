@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import axios from 'axios';
 import { MessageSquare, Send, X, Bot, User } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
 import './Chatbot.css';
 
 const Chatbot = () => {
@@ -65,7 +66,7 @@ const Chatbot = () => {
           <div className="chat-messages">
             {messages.map((msg, idx) => (
               <div key={idx} className={`message ${msg.sender}`}>
-                {msg.text}
+                <ReactMarkdown>{msg.text}</ReactMarkdown>
               </div>
             ))}
             {loading && (

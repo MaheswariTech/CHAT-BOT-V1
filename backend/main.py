@@ -4,7 +4,8 @@ from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from utils.knowledge_processor import process_file, process_url, FAISS_INDEX_PATH
-from langchain_openai import OpenAIEmbeddings
+from langchain_huggingface import HuggingFaceEmbeddings
+from langchain_groq import ChatGroq
 from dotenv import load_dotenv
 
 # Load environment variables explicitly from .env file
@@ -12,11 +13,12 @@ env_path = os.path.join(os.path.dirname(__file__), '.env')
 load_dotenv(dotenv_path=env_path)
 
 # Verify API Key
-API_KEY = os.getenv("OPENAI_API_KEY")
-if not API_KEY or API_KEY == "your_openai_api_key_here":
-    print("CRITICAL: OPENAI_API_KEY is not set correctly in backend/.env")
+# Verify API Key
+API_KEY = os.getenv("GROQ_API_KEY")
+if not API_KEY:
+    print("CRITICAL: GROQ_API_KEY is not set correctly in backend/.env")
 else:
-    print(f"SUCCESS: OPENAI_API_KEY loaded (starts with: {API_KEY[:8]}...)")
+    print(f"SUCCESS: GROQ_API_KEY loaded (starts with: {API_KEY[:8]}...)")
 
 app = FastAPI(title="MIET Student Helpdesk Chatbot API")
 
@@ -91,20 +93,26 @@ async def chat(request: ChatRequest):
         return {"answer": "I'm sorry, I'm having trouble connecting to my AI services. Please check the API config.", "version": "9.0-Agent"}
 
     try:
-        from langchain_openai import ChatOpenAI, OpenAIEmbeddings
+        from langchain_groq import ChatGroq
+        from langchain_huggingface import HuggingFaceEmbeddings
         from langchain_community.vectorstores import FAISS
         from langchain_core.messages import SystemMessage, HumanMessage
+        
+    
         
         # 1. Load Vector Store
         if not os.path.exists(FAISS_INDEX_PATH):
              return {"answer": "Hello! I don't have any college documents to study yet. Please upload a PDF in the Admin section so I can help you better.", "version": "9.1-Agent"}
         
-        embeddings = OpenAIEmbeddings(api_key=API_KEY, model="text-embedding-3-small")
+        embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
         vector_store = FAISS.load_local(FAISS_INDEX_PATH, embeddings, allow_dangerous_deserialization=True)
+        
+        
         
         # 2. Setup LLM
         # Temperature 0.3 to allow for natural phrasing while keeping facts straight
-        llm = ChatOpenAI(model_name="gpt-4o-mini", temperature=0.3, api_key=API_KEY)
+        # Using Groq with user specified model
+        llm = ChatGroq(model_name="openai/gpt-oss-120b", temperature=0.3, api_key=API_KEY, request_timeout=20)
 
         # 3. Setup Prompt for the Agent
         system_template = """You are the MIET AI Student Support Agent, a helpful, intelligent, and friendly assistant for MIET Arts and Science College. 
@@ -125,9 +133,12 @@ async def chat(request: ChatRequest):
             - If the answer is STRICTLY not in the documents, do not make up facts. 
             - Instead of a blunt "I don't know", say: "I couldn't find that specific detail in my current records. However, I can help you with course details, admissions, or faculty information. Is there something else you'd like to know?"
 
-        4.  **FORMATTING**:
-            - Use bullet points for lists (courses, fees, rules).
-            - Use **bold** text for names, dates, and important deadlines.
+        4.  **FORMATTING - CRITICAL**:
+            - You MUST use Markdown formatting to make the text clean and readable.
+            - Use **bold** for key concepts, names, dates, numerical values (fees, marks), and important terms.
+            - Use bullet points ( - ) for ANY lists, steps, or multi-part answers.
+            - Use tables if presenting structured data like fees or schedules.
+            - Keep paragraphs short and concise.
 
         Context from College Documents:
         {context}
